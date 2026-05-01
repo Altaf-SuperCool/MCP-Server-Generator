@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""
+{{name}} MCP Server
+Generated MCP server for {{name}}
+"""
+
+from mcp.server.fastmcp import FastMCP
+import httpx
+from typing import Any, Dict, Optional
+{{#if usePydantic}}
+from pydantic import BaseModel, Field
+{{/if}}
+import os
+import asyncio
+from functools import wraps
+
+# Initialize FastMCP server
+mcp = FastMCP("{{name}}")
+
+# API client configuration
+BASE_URL = "{{baseUrl}}"
+{{#if auth}}
+{{#if (eq auth.type 'apiKey')}}
+API_KEY = os.getenv("API_KEY", "")
+{{/if}}
+{{#if (eq auth.type 'bearer')}}
+API_TOKEN = os.getenv("API_TOKEN", "")
+{{/if}}
+{{#if (eq auth.type 'oauth2')}}
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "")
+{{/if}}
+{{#if (eq auth.type 'basic')}}
+USERNAME = os.getenv("API_USERNAME", "")
+PASSWORD = os.getenv("API_PASSWORD", "")
+{{/if}}
+{{/if}}
+
+# Create HTTP client with authentication
+headers = {
+    "Content-Type": "application/json",
+    {{#if auth}}
+    {{#if (eq auth.type 'apiKey')}}
+    "{{auth.headerName}}": API_KEY,
+    {{/if}}
+    {{#if (eq auth.type 'bearer')}}
+    "Authorization": f"Bearer {API_TOKEN}",
+    {{/if}}
+    {{#if (eq auth.type 'oauth2')}}
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    {{/if}}
+    {{/if}}
+}
+
+{{#if auth}}
+{{#if (eq auth.type 'basic')}}
+auth = httpx.BasicAuth(USERNAME, PASSWORD)
+client = httpx.AsyncClient(base_url=BASE_URL, timeout=30.0, headers=headers, auth=auth)
+{{else}}
+client = httpx.AsyncClient(base_url=BASE_URL, timeout=30.0, headers=headers)
+{{/if}}
+{{else}}
+client = httpx.AsyncClient(base_url=BASE_URL, timeout=30.0, headers=headers)
+{{/if}}
+
+{{#if retryLogic}}
+# Retry decorator
+def retry_on_failure(max_retries: int = 3):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except httpx.HTTPError as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    wait_time = 2 ** attempt
+                    await asyncio.sleep(wait_time)
+            return None
+        return wrapper
+    return decorator
+{{/if}}
+
+{{#if usePydantic}}
+# Pydantic models for validation
+{{#each tools}}
+class {{capitalize name}}Input(BaseModel):
+    {{#each inputSchema.properties}}
+    {{@key}}: {{pythonType type}}{{#if description}} = Field(description="{{description}}"){{/if}}
+    {{/each}}
+
+{{/each}}
+{{/if}}
+
+# Tool implementations
+{{#each tools}}
+@mcp.tool()
+{{#if ../retryLogic}}
+@retry_on_failure()
+{{/if}}
+async def {{name}}({{#if ../usePydantic}}input: {{capitalize name}}Input{{else}}{{#each inputSchema.properties}}{{@key}}: {{pythonType type}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}) -> Dict[str, Any]:
+    """{{description}}"""
+    try:
+        {{#if ../usePydantic}}
+        data = input.model_dump()
+        {{else}}
+        data = {
+            {{#each inputSchema.properties}}
+            "{{@key}}": {{@key}},
+            {{/each}}
+        }
+        {{/if}}
+        
+        response = await client.request(
+            method="{{endpoint.method}}",
+            url="{{endpoint.path}}",
+            {{#if (eq endpoint.method 'GET')}}
+            params=data
+            {{else}}
+            json=data
+            {{/if}}
+        )
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPError as e:
+        return {"error": f"HTTP error occurred: {str(e)}"}
+    except Exception as e:
+        return {"error": f"An error occurred: {str(e)}"}
+
+{{/each}}
+
+# Resource implementations
+{{#each resources}}
+@mcp.resource("{{uri}}")
+{{#if ../retryLogic}}
+@retry_on_failure()
+{{/if}}
+async def {{name}}() -> str:
+    """{{description}}"""
+    try:
+        response = await client.request(
+            method="{{endpoint.method}}",
+            url="{{endpoint.path}}"
+        )
+        response.raise_for_status()
+        return response.text
+    except httpx.HTTPError as e:
+        return f"HTTP error occurred: {str(e)}"
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
+{{/each}}
+
+if __name__ == "__main__":
+    mcp.run()

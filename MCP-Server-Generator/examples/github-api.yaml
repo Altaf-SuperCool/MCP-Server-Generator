@@ -1,0 +1,178 @@
+openapi: 3.0.0
+info:
+  title: GitHub API (Simplified)
+  version: 1.0.0
+  description: Simplified GitHub API for MCP Server demonstration
+servers:
+  - url: https://api.github.com
+security:
+  - bearerAuth: []
+paths:
+  /users/{username}:
+    get:
+      summary: Get a user
+      description: Retrieve information about a GitHub user
+      operationId: getUser
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The GitHub username
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /users/{username}/repos:
+    get:
+      summary: List user repositories
+      description: List public repositories for a user
+      operationId: listUserRepos
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The GitHub username
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 30
+          description: Results per page
+      responses:
+        '200':
+          description: List of repositories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repository'
+  /repos/{owner}/{repo}:
+    get:
+      summary: Get a repository
+      description: Get information about a repository
+      operationId: getRepository
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Repository information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+  /repos/{owner}/{repo}/issues:
+    get:
+      summary: List repository issues
+      description: List issues for a repository
+      operationId: listIssues
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: open
+      responses:
+        '200':
+          description: List of issues
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Issue'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: GitHub Personal Access Token
+  schemas:
+    User:
+      type: object
+      properties:
+        login:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+        public_repos:
+          type: integer
+        followers:
+          type: integer
+        following:
+          type: integer
+    Repository:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        full_name:
+          type: string
+        description:
+          type: string
+        private:
+          type: boolean
+        html_url:
+          type: string
+        stargazers_count:
+          type: integer
+        forks_count:
+          type: integer
+        language:
+          type: string
+    Issue:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+        state:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+# Made with Bob

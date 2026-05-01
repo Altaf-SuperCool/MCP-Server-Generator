@@ -1,0 +1,319 @@
+openapi: 3.0.0
+info:
+  title: Weather API
+  version: 1.0.0
+  description: Simple weather API for current conditions and forecasts
+servers:
+  - url: https://api.openweathermap.org/data/2.5
+    description: OpenWeatherMap API Server
+security:
+  - apiKeyAuth: []
+paths:
+  /weather:
+    get:
+      summary: Get current weather
+      operationId: getCurrentWeather
+      tags:
+        - Weather
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: City name, state code, and country code divided by comma
+          example: London,UK
+        - name: units
+          in: query
+          schema:
+            type: string
+            enum: [standard, metric, imperial]
+            default: metric
+          description: Units of measurement
+        - name: lang
+          in: query
+          schema:
+            type: string
+            default: en
+          description: Language for output
+      responses:
+        '200':
+          description: Current weather data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentWeather'
+        '404':
+          description: City not found
+  /forecast:
+    get:
+      summary: Get 5 day weather forecast
+      operationId: getForecast
+      tags:
+        - Weather
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: City name, state code, and country code
+          example: New York,US
+        - name: units
+          in: query
+          schema:
+            type: string
+            enum: [standard, metric, imperial]
+            default: metric
+          description: Units of measurement
+        - name: cnt
+          in: query
+          schema:
+            type: integer
+            default: 40
+          description: Number of timestamps to return
+      responses:
+        '200':
+          description: 5 day forecast data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Forecast'
+  /weather/coordinates:
+    get:
+      summary: Get weather by coordinates
+      operationId: getWeatherByCoordinates
+      tags:
+        - Weather
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Latitude
+          example: 51.5074
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Longitude
+          example: -0.1278
+        - name: units
+          in: query
+          schema:
+            type: string
+            enum: [standard, metric, imperial]
+            default: metric
+          description: Units of measurement
+      responses:
+        '200':
+          description: Current weather data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentWeather'
+  /air_pollution:
+    get:
+      summary: Get air pollution data
+      operationId: getAirPollution
+      tags:
+        - Air Quality
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Latitude
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+          description: Longitude
+      responses:
+        '200':
+          description: Air pollution data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AirPollution'
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: query
+      name: appid
+      description: API key for OpenWeatherMap
+  schemas:
+    CurrentWeather:
+      type: object
+      properties:
+        coord:
+          type: object
+          properties:
+            lon:
+              type: number
+            lat:
+              type: number
+        weather:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              main:
+                type: string
+              description:
+                type: string
+              icon:
+                type: string
+        main:
+          type: object
+          properties:
+            temp:
+              type: number
+              description: Temperature
+            feels_like:
+              type: number
+              description: Feels like temperature
+            temp_min:
+              type: number
+            temp_max:
+              type: number
+            pressure:
+              type: integer
+              description: Atmospheric pressure in hPa
+            humidity:
+              type: integer
+              description: Humidity percentage
+        wind:
+          type: object
+          properties:
+            speed:
+              type: number
+            deg:
+              type: integer
+        clouds:
+          type: object
+          properties:
+            all:
+              type: integer
+              description: Cloudiness percentage
+        dt:
+          type: integer
+          description: Time of data calculation, unix, UTC
+        name:
+          type: string
+          description: City name
+    Forecast:
+      type: object
+      properties:
+        cod:
+          type: string
+        message:
+          type: integer
+        cnt:
+          type: integer
+          description: Number of timestamps returned
+        list:
+          type: array
+          items:
+            type: object
+            properties:
+              dt:
+                type: integer
+              main:
+                type: object
+                properties:
+                  temp:
+                    type: number
+                  feels_like:
+                    type: number
+                  temp_min:
+                    type: number
+                  temp_max:
+                    type: number
+                  pressure:
+                    type: integer
+                  humidity:
+                    type: integer
+              weather:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    main:
+                      type: string
+                    description:
+                      type: string
+              wind:
+                type: object
+                properties:
+                  speed:
+                    type: number
+                  deg:
+                    type: integer
+              dt_txt:
+                type: string
+                description: Time of data forecasted, ISO, UTC
+        city:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            country:
+              type: string
+    AirPollution:
+      type: object
+      properties:
+        coord:
+          type: object
+          properties:
+            lon:
+              type: number
+            lat:
+              type: number
+        list:
+          type: array
+          items:
+            type: object
+            properties:
+              dt:
+                type: integer
+              main:
+                type: object
+                properties:
+                  aqi:
+                    type: integer
+                    description: Air Quality Index (1-5)
+              components:
+                type: object
+                properties:
+                  co:
+                    type: number
+                  no:
+                    type: number
+                  no2:
+                    type: number
+                  o3:
+                    type: number
+                  so2:
+                    type: number
+                  pm2_5:
+                    type: number
+                  pm10:
+                    type: number
+
+# Made with Bob

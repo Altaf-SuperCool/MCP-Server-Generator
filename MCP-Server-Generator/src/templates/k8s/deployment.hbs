@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{serverName}}
+  labels:
+    app: {{serverName}}
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{serverName}}
+  template:
+    metadata:
+      labels:
+        app: {{serverName}}
+        version: v1
+    spec:
+      containers:
+      - name: {{serverName}}
+        image: {{serverName}}:latest
+        imagePullPolicy: IfNotPresent
+        {{#if useHttpTransport}}
+        ports:
+        - containerPort: {{#if (eq language "typescript")}}3000{{else}}8000{{/if}}
+          name: http
+          protocol: TCP
+        {{/if}}
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: API_BASE_URL
+          value: "{{apiBaseUrl}}"
+        {{#if auth}}
+        {{#if (eq auth.type "apiKey")}}
+        - name: {{auth.envVar}}
+          valueFrom:
+            secretKeyRef:
+              name: {{serverName}}-secrets
+              key: api-key
+        {{/if}}
+        {{#if (eq auth.type "bearer")}}
+        - name: {{auth.envVar}}
+          valueFrom:
+            secretKeyRef:
+              name: {{serverName}}-secrets
+              key: bearer-token
+        {{/if}}
+        {{#if (eq auth.type "oauth2")}}
+        - name: {{auth.envVar}}
+          valueFrom:
+            secretKeyRef:
+              name: {{serverName}}-secrets
+              key: access-token
+        {{/if}}
+        {{#if (eq auth.type "basic")}}
+        - name: {{auth.usernameVar}}
+          valueFrom:
+            secretKeyRef:
+              name: {{serverName}}-secrets
+              key: username
+        - name: {{auth.passwordVar}}
+          valueFrom:
+            secretKeyRef:
+              name: {{serverName}}-secrets
+              key: password
+        {{/if}}
+        {{/if}}
+        {{#if useHttpTransport}}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        {{/if}}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{serverName}}
+  labels:
+    app: {{serverName}}
+spec:
+  {{#if useHttpTransport}}
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: {{#if (eq language "typescript")}}3000{{else}}8000{{/if}}
+    protocol: TCP
+    name: http
+  {{else}}
+  type: ClusterIP
+  clusterIP: None
+  {{/if}}
+  selector:
+    app: {{serverName}}

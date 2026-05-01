@@ -1,0 +1,267 @@
+import pytest
+import asyncio
+import os
+from unittest.mock import Mock, patch, AsyncMock
+import httpx
+
+# Set test environment variables
+{{#if auth}}
+{{#if (eq auth.type 'apiKey')}}
+os.environ['API_KEY'] = 'test-api-key'
+{{/if}}
+{{#if (eq auth.type 'bearer')}}
+os.environ['API_TOKEN'] = 'test-bearer-token'
+{{/if}}
+{{#if (eq auth.type 'oauth2')}}
+os.environ['ACCESS_TOKEN'] = 'test-access-token'
+{{/if}}
+{{#if (eq auth.type 'basic')}}
+os.environ['API_USERNAME'] = 'testuser'
+os.environ['API_PASSWORD'] = 'testpass'
+{{/if}}
+{{/if}}
+
+# Import after setting environment variables
+import main
+
+@pytest.fixture
+def mock_httpx_client():
+    """Mock httpx client for testing"""
+    with patch('main.client') as mock_client:
+        yield mock_client
+
+class TestTools:
+    """Test MCP tools"""
+    
+    {{#each tools}}
+    @pytest.mark.asyncio
+    async def test_{{name}}(self, mock_httpx_client):
+        """Test {{name}} tool"""
+        # Mock response
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "success", "data": {}}
+        mock_response.raise_for_status = Mock()
+        mock_httpx_client.request = AsyncMock(return_value=mock_response)
+        
+        # Test data
+        {{#if ../usePydantic}}
+        from main import {{capitalize name}}Input
+        test_input = {{capitalize name}}Input(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        result = await main.{{name}}(test_input)
+        {{else}}
+        result = await main.{{name}}(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        {{/if}}
+        
+        # Assertions
+        assert result is not None
+        assert 'status' in result
+        
+        # Verify API call
+        mock_httpx_client.request.assert_called_once()
+        call_args = mock_httpx_client.request.call_args
+        assert call_args[1]['method'] == '{{endpoint.method}}'
+        assert call_args[1]['url'] == '{{endpoint.path}}'
+    
+    @pytest.mark.asyncio
+    async def test_{{name}}_error_handling(self, mock_httpx_client):
+        """Test {{name}} error handling"""
+        # Mock error response
+        mock_httpx_client.request = AsyncMock(side_effect=httpx.HTTPError("Test error"))
+        
+        # Test error handling
+        {{#if ../usePydantic}}
+        from main import {{capitalize name}}Input
+        test_input = {{capitalize name}}Input(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        result = await main.{{name}}(test_input)
+        {{else}}
+        result = await main.{{name}}(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        {{/if}}
+        
+        # Should return error dict
+        assert 'error' in result
+    
+    {{/each}}
+
+class TestResources:
+    """Test MCP resources"""
+    
+    {{#each resources}}
+    @pytest.mark.asyncio
+    async def test_{{name}}(self, mock_httpx_client):
+        """Test {{name}} resource"""
+        # Mock response
+        mock_response = Mock()
+        mock_response.text = '{"status": "success"}'
+        mock_response.raise_for_status = Mock()
+        mock_httpx_client.request = AsyncMock(return_value=mock_response)
+        
+        # Test resource
+        result = await main.{{name}}()
+        
+        # Assertions
+        assert result is not None
+        assert isinstance(result, str)
+        
+        # Verify API call
+        mock_httpx_client.request.assert_called_once()
+        call_args = mock_httpx_client.request.call_args
+        assert call_args[1]['method'] == '{{endpoint.method}}'
+        assert call_args[1]['url'] == '{{endpoint.path}}'
+    
+    @pytest.mark.asyncio
+    async def test_{{name}}_error_handling(self, mock_httpx_client):
+        """Test {{name}} error handling"""
+        # Mock error response
+        mock_httpx_client.request = AsyncMock(side_effect=httpx.HTTPError("Test error"))
+        
+        # Test error handling
+        result = await main.{{name}}()
+        
+        # Should return error string
+        assert 'error' in result.lower() or 'Error' in result
+    
+    {{/each}}
+
+{{#if usePydantic}}
+class TestValidation:
+    """Test Pydantic validation"""
+    
+    {{#each tools}}
+    def test_{{name}}_input_validation(self):
+        """Test {{name}} input validation"""
+        from main import {{capitalize name}}Input
+        
+        # Valid input
+        valid_input = {{capitalize name}}Input(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        assert valid_input is not None
+        
+        # Invalid input should raise validation error
+        with pytest.raises(Exception):
+            {{capitalize name}}Input()
+    
+    {{/each}}
+{{/if}}
+
+class TestAuthentication:
+    """Test authentication"""
+    
+    {{#if auth}}
+    def test_auth_headers_present(self):
+        """Test that authentication headers are set"""
+        from main import headers
+        assert headers is not None
+        {{#if (eq auth.type 'apiKey')}}
+        assert '{{auth.headerName}}' in headers
+        {{/if}}
+        {{#if (eq auth.type 'bearer')}}
+        assert 'Authorization' in headers
+        assert headers['Authorization'].startswith('Bearer ')
+        {{/if}}
+    
+    def test_auth_environment_variables(self):
+        """Test that auth environment variables are read"""
+        {{#if (eq auth.type 'apiKey')}}
+        assert os.getenv('API_KEY') is not None
+        {{/if}}
+        {{#if (eq auth.type 'bearer')}}
+        assert os.getenv('API_TOKEN') is not None
+        {{/if}}
+        {{#if (eq auth.type 'oauth2')}}
+        assert os.getenv('ACCESS_TOKEN') is not None
+        {{/if}}
+        {{#if (eq auth.type 'basic')}}
+        assert os.getenv('API_USERNAME') is not None
+        assert os.getenv('API_PASSWORD') is not None
+        {{/if}}
+    {{else}}
+    def test_no_authentication_required(self):
+        """Test that no authentication is required"""
+        assert True
+    {{/if}}
+
+{{#if retryLogic}}
+class TestRetryLogic:
+    """Test retry logic"""
+    
+    @pytest.mark.asyncio
+    async def test_retry_on_failure(self, mock_httpx_client):
+        """Test that requests are retried on failure"""
+        # Mock to fail twice then succeed
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "success"}
+        mock_response.raise_for_status = Mock()
+        
+        mock_httpx_client.request = AsyncMock(
+            side_effect=[
+                httpx.HTTPError("Error 1"),
+                httpx.HTTPError("Error 2"),
+                mock_response
+            ]
+        )
+        
+        # Test with first tool
+        {{#if tools}}
+        {{#with (lookup tools 0)}}
+        {{#if ../usePydantic}}
+        from main import {{capitalize name}}Input
+        test_input = {{capitalize name}}Input(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        result = await main.{{name}}(test_input)
+        {{else}}
+        result = await main.{{name}}(
+            {{#each inputSchema.properties}}
+            {{@key}}={{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}True{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+        )
+        {{/if}}
+        
+        # Should eventually succeed
+        assert result is not None
+        assert mock_httpx_client.request.call_count == 3
+        {{/with}}
+        {{/if}}
+{{/if}}
+
+# Fixtures for test data
+@pytest.fixture
+def sample_api_response():
+    """Sample API response for testing"""
+    return {
+        "status": "success",
+        "data": {
+            "id": 1,
+            "name": "Test Item",
+            "value": 100
+        }
+    }
+
+@pytest.fixture
+def sample_error_response():
+    """Sample error response for testing"""
+    return {
+        "status": "error",
+        "message": "Test error message"
+    }

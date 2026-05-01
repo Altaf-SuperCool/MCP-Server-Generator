@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  {{serverName}}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{serverName}}
+    {{#if useHttpTransport}}
+    ports:
+      - "{{#if (eq language "typescript")}}3000:3000{{else}}8000:8000{{/if}}"
+    {{/if}}
+    environment:
+      - NODE_ENV=production
+      {{#if auth}}
+      {{#if (eq auth.type "apiKey")}}
+      - {{auth.envVar}}=${{"{"}}{{auth.envVar}}{{"}"}}
+      {{/if}}
+      {{#if (eq auth.type "bearer")}}
+      - {{auth.envVar}}=${{"{"}}{{auth.envVar}}{{"}"}}
+      {{/if}}
+      {{#if (eq auth.type "oauth2")}}
+      - {{auth.envVar}}=${{"{"}}{{auth.envVar}}{{"}"}}
+      {{/if}}
+      {{#if (eq auth.type "basic")}}
+      - {{auth.usernameVar}}=${{"{"}}{{auth.usernameVar}}{{"}"}}
+      - {{auth.passwordVar}}=${{"{"}}{{auth.passwordVar}}{{"}"}}
+      {{/if}}
+      {{/if}}
+      - API_BASE_URL={{apiBaseUrl}}
+    env_file:
+      - .env
+    restart: unless-stopped
+    {{#unless useHttpTransport}}
+    # STDIO transport - use stdin/stdout
+    stdin_open: true
+    tty: true
+    {{/unless}}
+    healthcheck:
+      {{#if useHttpTransport}}
+      test: ["CMD", "curl", "-f", "http://localhost:{{#if (eq language "typescript")}}3000{{else}}8000{{/if}}/health"]
+      {{else}}
+      test: ["CMD", "echo", "OK"]
+      {{/if}}
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mcp-network
+    volumes:
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  logs:

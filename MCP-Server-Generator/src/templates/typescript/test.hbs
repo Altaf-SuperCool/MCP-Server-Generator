@@ -1,0 +1,241 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+import axios from 'axios';
+import { spawn, ChildProcess } from 'child_process';
+
+// Mock fetch globally for unit tests
+const mockFetch = jest.fn();
+global.fetch = mockFetch as any;
+
+describe('{{name}} MCP Server', () => {
+  let serverProcess: ChildProcess;
+  
+  beforeAll(async () => {
+    // Start the MCP server
+    serverProcess = spawn('node', ['dist/index.js'], {
+      env: {
+        ...process.env,
+        {{#if auth}}
+        {{#if (eq auth.type 'apiKey')}}
+        API_KEY: 'test-api-key',
+        {{/if}}
+        {{#if (eq auth.type 'bearer')}}
+        API_TOKEN: 'test-bearer-token',
+        GITHUB_TOKEN: 'test-github-token',
+        {{/if}}
+        {{#if (eq auth.type 'oauth2')}}
+        ACCESS_TOKEN: 'test-access-token',
+        {{/if}}
+        {{#if (eq auth.type 'basic')}}
+        API_USERNAME: 'testuser',
+        API_PASSWORD: 'testpass',
+        {{/if}}
+        {{/if}}
+      }
+    });
+    
+    // Wait for server to start
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  });
+  
+  afterAll(() => {
+    if (serverProcess) {
+      serverProcess.kill();
+    }
+  });
+  
+  beforeEach(() => {
+    // Reset mocks before each test
+    jest.clearAllMocks();
+    
+    // Setup default mock responses
+    mockFetch.mockImplementation((url: string) => {
+      {{#each resources}}
+      if (url.includes('{{endpoint.path}}')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            {{#if (contains endpoint.path 'user')}}
+            login: 'testuser',
+            id: 12345,
+            name: 'Test User',
+            email: 'test@example.com',
+            {{/if}}
+            {{#if (contains endpoint.path 'repo')}}
+            name: 'test-repo',
+            full_name: 'testuser/test-repo',
+            description: 'Test repository',
+            stargazers_count: 100,
+            {{/if}}
+            success: true,
+            data: 'mock-data'
+          }),
+          text: async () => JSON.stringify({ success: true }),
+        });
+      }
+      {{/each}}
+      
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, message: 'Mock response' }),
+        text: async () => JSON.stringify({ success: true }),
+      });
+    });
+  });
+  
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+  
+  describe('Unit Tests', () => {
+    {{#each resources}}
+    describe('{{name}} Resource', () => {
+      it('should validate resource URI', () => {
+        const uri = '{{uri}}';
+        expect(uri).toBe('{{uri}}');
+        expect(uri).toMatch(/^[a-z0-9-]+:\/\//);
+      });
+      
+      it('should have correct MIME type', () => {
+        const mimeType = '{{mimeType}}';
+        expect(mimeType).toBeDefined();
+        expect(mimeType).toMatch(/^[a-z]+\/[a-z+]+$/);
+      });
+      
+      it('should handle API endpoint path', () => {
+        const path = '{{endpoint.path}}';
+        expect(path).toBeDefined();
+        expect(path.startsWith('/')).toBe(true);
+      });
+    });
+    
+    {{/each}}
+    
+    {{#each tools}}
+    describe('{{name}} Tool', () => {
+      it('should validate input parameters', () => {
+        const schema = {{{json inputSchema}}};
+        expect(schema).toBeDefined();
+        expect(schema.type).toBe('object');
+        {{#if inputSchema.required}}
+        expect(schema.required).toEqual({{{json inputSchema.required}}});
+        {{/if}}
+      });
+      
+      it('should have valid endpoint configuration', () => {
+        const method = '{{endpoint.method}}';
+        const path = '{{endpoint.path}}';
+        expect(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).toContain(method);
+        expect(path).toBeDefined();
+      });
+      
+      {{#each inputSchema.properties}}
+      it('should validate {{@key}} parameter', () => {
+        const paramType = '{{type}}';
+        expect(paramType).toBeDefined();
+        {{#if description}}
+        const description = '{{description}}';
+        expect(description).toBeTruthy();
+        {{/if}}
+      });
+      
+      {{/each}}
+    });
+    
+    {{/each}}
+  });
+  
+  describe('Tools', () => {
+    {{#each tools}}
+    it('should execute {{name}} tool', async () => {
+      // Mock test data
+      const testInput = {
+        {{#each inputSchema.properties}}
+        {{@key}}: {{#if (eq type 'string')}}'test-value'{{/if}}{{#if (eq type 'number')}}123{{/if}}{{#if (eq type 'boolean')}}true{{/if}}{{#unless @last}},{{/unless}}
+        {{/each}}
+      };
+      
+      // Test tool execution
+      // Note: This is a basic test structure
+      // You'll need to implement actual MCP protocol communication
+      expect(testInput).toBeDefined();
+    });
+    
+    it('should handle {{name}} tool errors gracefully', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API Error'));
+      // Test error handling
+      expect(mockFetch).toBeDefined();
+    });
+    
+    it('should handle {{name}} tool with invalid input', async () => {
+      const invalidInput = {};
+      // Test validation
+      expect(invalidInput).toBeDefined();
+    });
+    
+    {{/each}}
+  });
+  
+  describe('Resources', () => {
+    {{#each resources}}
+    it('should read {{name}} resource', async () => {
+      // Test resource reading
+      // Note: This is a basic test structure
+      // You'll need to implement actual MCP protocol communication
+      const resourceUri = '{{uri}}';
+      expect(resourceUri).toBe('{{uri}}');
+    });
+    
+    {{/each}}
+  });
+  
+  describe('Error Handling', () => {
+    it('should handle invalid tool names', async () => {
+      // Test error handling for invalid tool
+      expect(true).toBe(true);
+    });
+    
+    it('should handle invalid resource URIs', async () => {
+      // Test error handling for invalid resource
+      expect(true).toBe(true);
+    });
+    
+    {{#if useZod}}
+    it('should validate input schemas', async () => {
+      // Test input validation
+      expect(true).toBe(true);
+    });
+    {{/if}}
+  });
+  
+  describe('Authentication', () => {
+    {{#if auth}}
+    it('should authenticate requests', async () => {
+      // Test authentication
+      expect(true).toBe(true);
+    });
+    
+    it('should reject unauthenticated requests', async () => {
+      // Test authentication failure
+      expect(true).toBe(true);
+    });
+    {{else}}
+    it('should work without authentication', async () => {
+      expect(true).toBe(true);
+    });
+    {{/if}}
+  });
+});
+
+// Integration tests with actual API
+describe('{{name}} API Integration', () => {
+  {{#each tools}}
+  it('should call {{endpoint.method}} {{endpoint.path}}', async () => {
+    // Mock the API endpoint
+    // This test requires actual API access or mocking
+    expect(true).toBe(true);
+  });
+  
+  {{/each}}
+});

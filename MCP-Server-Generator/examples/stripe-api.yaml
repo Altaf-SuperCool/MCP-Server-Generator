@@ -1,0 +1,199 @@
+openapi: 3.0.0
+info:
+  title: Stripe Payment API
+  version: 1.0.0
+  description: Stripe API for payment processing and subscription management
+servers:
+  - url: https://api.stripe.com/v1
+    description: Stripe API Server
+security:
+  - bearerAuth: []
+paths:
+  /customers:
+    post:
+      summary: Create a customer
+      operationId: createCustomer
+      tags:
+        - Customers
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Customer's email address
+                name:
+                  type: string
+                  description: Customer's full name
+                description:
+                  type: string
+                  description: An arbitrary string attached to the object
+      responses:
+        '200':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+  /customers/{customer_id}:
+    get:
+      summary: Retrieve a customer
+      operationId: getCustomer
+      tags:
+        - Customers
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The customer ID
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+  /payment_intents:
+    post:
+      summary: Create a payment intent
+      operationId: createPaymentIntent
+      tags:
+        - Payments
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - amount
+                - currency
+              properties:
+                amount:
+                  type: integer
+                  description: Amount in cents
+                currency:
+                  type: string
+                  description: Three-letter ISO currency code
+                  example: usd
+                customer:
+                  type: string
+                  description: Customer ID
+                description:
+                  type: string
+                  description: Payment description
+      responses:
+        '200':
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntent'
+  /subscriptions:
+    post:
+      summary: Create a subscription
+      operationId: createSubscription
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - customer
+                - items
+              properties:
+                customer:
+                  type: string
+                  description: Customer ID
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      price:
+                        type: string
+                        description: Price ID
+      responses:
+        '200':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+  /subscriptions/{subscription_id}:
+    get:
+      summary: Retrieve a subscription
+      operationId: getSubscription
+      tags:
+        - Subscriptions
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The subscription ID
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created:
+          type: integer
+    PaymentIntent:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+        customer:
+          type: string
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        customer:
+          type: string
+        status:
+          type: string
+        current_period_start:
+          type: integer
+        current_period_end:
+          type: integer
+
+# Made with Bob

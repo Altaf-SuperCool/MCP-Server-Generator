@@ -1,0 +1,298 @@
+openapi: 3.0.0
+info:
+  title: Slack Web API
+  version: 1.0.0
+  description: Slack API for messaging, channels, and user management
+servers:
+  - url: https://slack.com/api
+    description: Slack API Server
+security:
+  - bearerAuth: []
+paths:
+  /chat.postMessage:
+    post:
+      summary: Send a message to a channel
+      operationId: postMessage
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channel
+                - text
+              properties:
+                channel:
+                  type: string
+                  description: Channel, private group, or IM channel to send message to
+                  example: C1234567890
+                text:
+                  type: string
+                  description: The message text
+                  example: Hello, world!
+                thread_ts:
+                  type: string
+                  description: Provide thread's parent message timestamp to make this a reply
+                username:
+                  type: string
+                  description: Set your bot's user name
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /conversations.create:
+    post:
+      summary: Create a new channel
+      operationId: createChannel
+      tags:
+        - Channels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name of the channel to create
+                  example: my-new-channel
+                is_private:
+                  type: boolean
+                  description: Create a private channel instead of a public one
+                  default: false
+      responses:
+        '200':
+          description: Channel created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelResponse'
+  /conversations.list:
+    get:
+      summary: List all channels
+      operationId: listChannels
+      tags:
+        - Channels
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of channels to return
+        - name: types
+          in: query
+          schema:
+            type: string
+            default: public_channel
+          description: Mix and match channel types
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelListResponse'
+  /users.list:
+    get:
+      summary: List all users in a workspace
+      operationId: listUsers
+      tags:
+        - Users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of users to return
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+  /users.info:
+    get:
+      summary: Get information about a user
+      operationId: getUserInfo
+      tags:
+        - Users
+      parameters:
+        - name: user
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID to get info on
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+  /files.upload:
+    post:
+      summary: Upload or create a file
+      operationId: uploadFile
+      tags:
+        - Files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - channels
+              properties:
+                channels:
+                  type: string
+                  description: Comma-separated list of channel IDs
+                content:
+                  type: string
+                  description: File contents
+                filename:
+                  type: string
+                  description: Filename of file
+                title:
+                  type: string
+                  description: Title of file
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Slack Bot Token (xoxb-...)
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        channel:
+          type: string
+        ts:
+          type: string
+        message:
+          type: object
+          properties:
+            text:
+              type: string
+            username:
+              type: string
+            bot_id:
+              type: string
+    ChannelResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        channel:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            is_channel:
+              type: boolean
+            is_private:
+              type: boolean
+            created:
+              type: integer
+    ChannelListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              is_channel:
+                type: boolean
+              num_members:
+                type: integer
+    UserListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              real_name:
+                type: string
+              is_bot:
+                type: boolean
+    UserInfoResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            real_name:
+              type: string
+            profile:
+              type: object
+              properties:
+                email:
+                  type: string
+                image_72:
+                  type: string
+    FileResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        file:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            title:
+              type: string
+            mimetype:
+              type: string
+            size:
+              type: integer
+
+# Made with Bob

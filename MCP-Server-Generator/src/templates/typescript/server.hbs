@@ -1,0 +1,270 @@
+#!/usr/bin/env node
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+{{#if useHttpTransport}}
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import express from 'express';
+{{/if}}
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import axios, { AxiosInstance } from 'axios';
+{{#if useZod}}
+import { z } from 'zod';
+{{/if}}
+
+const BASE_URL = '{{baseUrl}}';
+
+{{#if useZod}}
+// Zod schemas for validation
+{{#each tools}}
+const {{name}}Schema = z.object({
+  {{#each inputSchema.properties}}
+  {{@key}}: z.{{type}}(){{#if description}}.describe('{{description}}'){{/if}}{{#if ../inputSchema.required}}{{#if (includes ../inputSchema.required @key)}}.required(){{/if}}{{/if}},
+  {{/each}}
+});
+{{/each}}
+{{/if}}
+
+class {{className}}Server {
+  private server: Server;
+  private axiosInstance: AxiosInstance;
+  
+  constructor() {
+    this.server = new Server(
+      {
+        name: '{{name}}',
+        version: '{{version}}',
+      },
+      {
+        capabilities: {
+          tools: {},
+          resources: {},
+        },
+      }
+    );
+    
+    this.axiosInstance = axios.create({
+      baseURL: BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': '{{name}}-MCP-Server/{{version}}',
+        {{#if auth}}
+        {{#if (eq auth.type 'apiKey')}}
+        '{{auth.headerName}}': process.env.API_KEY || '',
+        {{/if}}
+        {{#if (eq auth.type 'bearer')}}
+        'Authorization': `Bearer ${process.env.API_TOKEN || process.env.GITHUB_TOKEN || ''}`,
+        {{/if}}
+        {{#if (eq auth.type 'oauth2')}}
+        'Authorization': `Bearer ${process.env.ACCESS_TOKEN || ''}`,
+        {{/if}}
+        {{#if (eq auth.type 'basic')}}
+        'Authorization': `Basic ${Buffer.from(`${process.env.API_USERNAME}:${process.env.API_PASSWORD}`).toString('base64')}`,
+        {{/if}}
+        {{/if}}
+      },
+      timeout: 30000,
+    });
+    
+    {{#if retryLogic}}
+    // Add retry logic
+    this.setupRetryInterceptor();
+    {{/if}}
+    
+    this.setupHandlers();
+  }
+  
+  {{#if retryLogic}}
+  private setupRetryInterceptor(): void {
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const config = error.config;
+        if (!config || !config.retry) {
+          config.retry = 0;
+        }
+        
+        if (config.retry >= 3) {
+          return Promise.reject(error);
+        }
+        
+        config.retry += 1;
+        const delay = Math.pow(2, config.retry) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        return this.axiosInstance(config);
+      }
+    );
+  }
+  {{/if}}
+  
+  private setupHandlers(): void {
+    // List tools handler
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [
+        {{#each tools}}
+        {
+          name: '{{name}}',
+          description: '{{description}}',
+          inputSchema: {{{json inputSchema}}}
+        },
+        {{/each}}
+      ]
+    }));
+    
+    // Call tool handler
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      
+      try {
+        {{#if useZod}}
+        // Validate input
+        switch (name) {
+          {{#each tools}}
+          case '{{name}}':
+            {{name}}Schema.parse(args);
+            break;
+          {{/each}}
+        }
+        {{/if}}
+        
+        switch (name) {
+          {{#each tools}}
+          case '{{name}}':
+            return await this.{{name}}(args);
+          {{/each}}
+          default:
+            throw new Error(`Unknown tool: ${name}`);
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error.message}`
+            }
+          ],
+          isError: true
+        };
+      }
+    });
+    
+    // List resources handler
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: [
+        {{#each resources}}
+        {
+          uri: '{{uri}}',
+          name: '{{name}}',
+          description: '{{description}}',
+          mimeType: '{{mimeType}}'
+        },
+        {{/each}}
+      ]
+    }));
+    
+    // Read resource handler
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const uri = request.params.uri;
+      
+      try {
+        {{#each resources}}
+        if (uri === '{{uri}}') {
+          return await this.{{name}}();
+        }
+        {{/each}}
+        
+        throw new Error(`Unknown resource: ${uri}`);
+      } catch (error: any) {
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'text/plain',
+              text: `Error: ${error.message}`
+            }
+          ]
+        };
+      }
+    });
+  }
+  
+  // Tool implementations
+  {{#each tools}}
+  private async {{name}}(args: any): Promise<any> {
+    try {
+      const response = await this.axiosInstance.request({
+        method: '{{endpoint.method}}',
+        url: '{{endpoint.path}}',
+        {{#if (eq endpoint.method 'GET')}}
+        params: args,
+        {{else}}
+        data: args,
+        {{/if}}
+      });
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(response.data, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to execute {{name}}: ${error.message}`);
+    }
+  }
+  
+  {{/each}}
+  
+  // Resource implementations
+  {{#each resources}}
+  private async {{name}}(): Promise<any> {
+    try {
+      const response = await this.axiosInstance.request({
+        method: '{{endpoint.method}}',
+        url: '{{endpoint.path}}',
+      });
+      
+      return {
+        contents: [
+          {
+            uri: '{{uri}}',
+            mimeType: '{{mimeType}}',
+            text: JSON.stringify(response.data, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to read {{name}}: ${error.message}`);
+    }
+  }
+  
+  {{/each}}
+  
+  async run(): Promise<void> {
+    {{#if useHttpTransport}}
+    const app = express();
+    const transport = new SSEServerTransport('/message', app);
+    await this.server.connect(transport);
+    
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.error(`{{name}} MCP server running on http://localhost:${PORT}`);
+    });
+    {{else}}
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error('{{name}} MCP server running on stdio');
+    {{/if}}
+  }
+}
+
+const server = new {{className}}Server();
+server.run().catch(console.error);
