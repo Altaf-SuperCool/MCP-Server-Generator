@@ -1,0 +1,419 @@
+
+<style>
+  * { box-sizing: border-box; }
+  @keyframes slide-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .sim { font-family: var(--font-sans,sans-serif); padding-bottom:2rem; }
+  .hero { background:linear-gradient(135deg,#4C1D95,#7C3AED); border-radius:12px; padding:1.5rem 2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; }
+  .hero::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 30px,rgba(255,255,255,.03) 30px,rgba(255,255,255,.03) 31px); }
+  .hero-inner { position:relative; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+  .hero h2 { color:#fff; font-size:20px; font-weight:500; margin:0 0 4px; }
+  .hero p  { color:rgba(255,255,255,.7); font-size:13px; margin:0; }
+  .badge  { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:11px; padding:4px 12px; border-radius:100px; }
+  .steps  { display:flex; align-items:flex-start; margin-bottom:1.5rem; }
+  .step-col { display:flex; flex-direction:column; align-items:center; }
+  .sdot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; transition:all .3s; }
+  .sdot.done   { background:#7C3AED; color:#fff; }
+  .sdot.active { background:#7C3AED; color:#fff; box-shadow:0 0 0 4px rgba(124,58,237,.25); }
+  .sdot.idle   { background:var(--color-background-secondary,#f0f0f0); color:var(--color-text-secondary,#888); border:0.5px solid var(--color-border-tertiary,#ddd); }
+  .sline { flex:1; height:2px; margin-top:13px; transition:background .4s; }
+  .sline.done { background:#7C3AED; } .sline.idle { background:var(--color-border-tertiary,#ddd); }
+  .slabel { font-size:11px; color:var(--color-text-secondary,#888); margin-top:4px; }
+  .step-item { display:flex; align-items:flex-start; flex:1; }
+  .panel { background:var(--color-background-primary,#fff); border:0.5px solid var(--color-border-tertiary,#ddd); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1rem; animation:slide-in .3s ease; }
+  .ptitle { font-size:13px; font-weight:500; color:var(--color-text-secondary,#888); margin:0 0 1rem; text-transform:uppercase; letter-spacing:.05em; }
+  .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1rem; }
+  .ffield { display:flex; flex-direction:column; gap:6px; }
+  .ffield label { font-size:12px; color:var(--color-text-secondary,#888); }
+  .pgroup { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill {
+    padding:6px 14px; border-radius:100px; font-size:13px; cursor:pointer;
+    font-family:inherit; line-height:1.4; transition:all .15s;
+    border:1.5px solid #bbb; background:transparent; color:inherit;
+  }
+  .pill:hover { border-color:#7C3AED; color:#7C3AED; }
+  .ibox { width:100%; padding:8px 12px; border-radius:8px; font-size:13px; border:0.5px solid var(--color-border-secondary,#ccc); background:var(--color-background-secondary,#f8f8f8); color:inherit; outline:none; font-family:inherit; }
+  .ibox:focus { border-color:#7C3AED; }
+  .mono { font-family:var(--font-mono,monospace); font-size:11px; background:#1e1b4b; color:#c4b5fd; border-radius:8px; padding:12px; line-height:1.7; min-height:80px; border:1px solid rgba(124,58,237,.3); white-space:pre-wrap; word-break:break-all; }
+  .gbtn { width:100%; padding:14px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(135deg,#5B21B6,#7C3AED); color:#fff; font-size:15px; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; transition:all .2s; }
+  .gbtn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 20px rgba(124,58,237,.4); }
+  .gbtn:disabled { opacity:.6; cursor:not-allowed; }
+  .gbtn.grey { background:linear-gradient(135deg,#374151,#4B5563); }
+  .pbar-wrap { background:var(--color-background-secondary,#f0f0f0); border-radius:100px; height:6px; overflow:hidden; margin:8px 0; }
+  .pbar { height:100%; background:linear-gradient(90deg,#7C3AED,#A78BFA); border-radius:100px; transition:width .4s ease; }
+  .logwrap { max-height:160px; overflow-y:auto; }
+  .logline { font-size:12px; padding:3px 0; display:flex; align-items:center; gap:8px; animation:slide-in .2s ease; }
+  .ldot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .tabs { display:flex; gap:4px; border-bottom:0.5px solid var(--color-border-tertiary,#ddd); margin-bottom:1rem; }
+  .tab { padding:8px 16px; font-size:13px; cursor:pointer; border-radius:6px 6px 0 0; border:none; background:transparent; color:var(--color-text-secondary,#888); font-family:inherit; transition:all .2s; }
+  .tab.on { color:#7C3AED; background:#EDE9FE; font-weight:500; }
+  .sgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1rem; }
+  .scard { background:var(--color-background-secondary,#f5f5f5); border-radius:8px; padding:12px; text-align:center; }
+  .sval { font-size:22px; font-weight:500; color:#7C3AED; }
+  .slbl { font-size:11px; color:var(--color-text-secondary,#888); margin-top:2px; }
+  .code { background:#0F0F1A; border-radius:8px; padding:1rem; font-family:monospace; font-size:11.5px; line-height:1.8; overflow-x:auto; color:#e2e8f0; }
+  .kw{color:#C084FC} .st{color:#86EFAC} .fn{color:#60A5FA} .cm{color:#6B7280} .nm{color:#FCD34D}
+  .ftree { font-family:var(--font-mono,monospace); font-size:12px; line-height:2.1; }
+  .fc{color:#D97706} .fts{color:#60A5FA} .fpy{color:#4ADE80} .fo{color:var(--color-text-secondary,#888)}
+  .brow { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .bpill { padding:4px 12px; border-radius:100px; font-size:12px; font-weight:500; }
+  .div { border:none; border-top:0.5px solid var(--color-border-tertiary,#ddd); margin:1rem 0; }
+  .cpybtn { font-size:11px; padding:4px 10px; border-radius:6px; border:0.5px solid var(--color-border-secondary,#ccc); background:transparent; color:var(--color-text-secondary,#888); cursor:pointer; float:right; margin-top:-4px; font-family:inherit; }
+  .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:#1F2937; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; transition:transform .3s; z-index:999; pointer-events:none; }
+  #toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+
+<div class="sim">
+  <div class="hero">
+    <div class="hero-inner">
+      <div><h2>⚡ MCP Server Generator — Live Simulation</h2><p>Generate production-ready MCP servers from API specs in seconds</p></div>
+      <span class="badge">by Altaf 🚀</span>
+    </div>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <!-- STEP 1 -->
+  <div id="s1" class="panel">
+    <p class="ptitle">Step 1 — API Specification Input</p>
+    <div class="fgrid">
+      <div class="ffield"><label>Spec Type</label>
+        <div class="pgroup" id="g-spec">
+          <button type="button" class="pill" data-g="g-spec">OpenAPI 3.x</button>
+          <button type="button" class="pill" data-g="g-spec">GraphQL SDL</button>
+          <button type="button" class="pill" data-g="g-spec">REST Descriptor</button>
+        </div>
+      </div>
+      <div class="ffield"><label>Output Language</label>
+        <div class="pgroup" id="g-lang">
+          <button type="button" class="pill" data-g="g-lang">TypeScript</button>
+          <button type="button" class="pill" data-g="g-lang">Python</button>
+        </div>
+      </div>
+    </div>
+    <div class="fgrid">
+      <div class="ffield"><label>Authentication</label>
+        <div class="pgroup" id="g-auth">
+          <button type="button" class="pill" data-g="g-auth">Bearer</button>
+          <button type="button" class="pill" data-g="g-auth">API Key</button>
+          <button type="button" class="pill" data-g="g-auth">OAuth2</button>
+          <button type="button" class="pill" data-g="g-auth">Basic</button>
+        </div>
+      </div>
+      <div class="ffield"><label>Deployment Target</label>
+        <div class="pgroup" id="g-deploy">
+          <button type="button" class="pill" data-g="g-deploy">Docker</button>
+          <button type="button" class="pill" data-g="g-deploy">Kubernetes</button>
+          <button type="button" class="pill" data-g="g-deploy">Bare Metal</button>
+        </div>
+      </div>
+    </div>
+    <div class="ffield" style="margin:1rem 0">
+      <label>API Spec Source</label>
+      <input class="ibox" id="spec-url" type="text" value="examples/github-api.yaml" />
+    </div>
+    <div class="ffield" style="margin-bottom:1.25rem">
+      <label>Detected Spec Preview</label>
+      <div class="mono" id="spec-prev">openapi: "3.0.0"
+info:
+  title: GitHub REST API
+  version: "1.4.0"
+paths:
+  /repos/{owner}/{repo}:
+    get:
+      operationId: getRepository
+      ...</div>
+    </div>
+    <button type="button" class="gbtn" id="genbtn">⚡ Generate MCP Server</button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="s2" class="panel" style="display:none">
+    <p class="ptitle">Step 2 — AI-Assisted Generation</p>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+      <span id="gphase" style="color:var(--color-text-secondary,#888)">Initializing...</span>
+      <span id="gpct" style="font-weight:500;color:#7C3AED">0%</span>
+    </div>
+    <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:0%"></div></div>
+    <div class="logwrap" id="logwrap"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="s3" class="panel" style="display:none">
+    <p class="ptitle">Step 3 — Generated Server Output</p>
+    <div class="sgrid" id="sgrid" style="display:none">
+      <div class="scard"><div class="sval" id="st-tools">0</div><div class="slbl">MCP Tools</div></div>
+      <div class="scard"><div class="sval" id="st-res">0</div><div class="slbl">MCP Resources</div></div>
+      <div class="scard"><div class="sval" id="st-ep">0</div><div class="slbl">Endpoints</div></div>
+      <div class="scard"><div class="sval" id="st-time">0s</div><div class="slbl">Generated in</div></div>
+    </div>
+    <div class="tabs" id="tabbar">
+      <button type="button" class="tab on" data-tab="tc">Generated Code</button>
+      <button type="button" class="tab" data-tab="tf">File Structure</button>
+      <button type="button" class="tab" data-tab="ta">Architecture</button>
+      <button type="button" class="tab" data-tab="td">Deploy</button>
+    </div>
+    <div id="tc"><button type="button" class="cpybtn" id="cpybtn">Copy</button><div class="code" id="codeout"></div></div>
+    <div id="tf" style="display:none"><div class="ftree" id="ftree"></div></div>
+    <div id="ta" style="display:none">
+      <svg width="100%" viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+        <rect x="20" y="115" width="110" height="52" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="0.5"/>
+        <text x="75" y="138" text-anchor="middle" font-size="12" font-weight="500" fill="#5B21B6">API Spec</text>
+        <text x="75" y="155" text-anchor="middle" font-size="11" fill="#7C3AED">OpenAPI / GraphQL</text>
+        <rect x="170" y="85" width="120" height="48" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="0.5"/>
+        <text x="230" y="107" text-anchor="middle" font-size="12" font-weight="500" fill="#92400E">Spec Parser</text>
+        <text x="230" y="123" text-anchor="middle" font-size="11" fill="#B45309">swagger-parser</text>
+        <rect x="170" y="165" width="120" height="48" rx="8" fill="#CCFBF1" stroke="#0F766E" stroke-width="0.5"/>
+        <text x="230" y="187" text-anchor="middle" font-size="12" font-weight="500" fill="#134E4A">Bob AI Analyzer</text>
+        <text x="230" y="203" text-anchor="middle" font-size="11" fill="#0F766E">Prompt workflows</text>
+        <rect x="340" y="115" width="130" height="48" rx="8" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="0.5"/>
+        <text x="405" y="137" text-anchor="middle" font-size="12" font-weight="500" fill="#1E3A8A">Code Generator</text>
+        <text x="405" y="153" text-anchor="middle" font-size="11" fill="#1D4ED8">Handlebars</text>
+        <rect x="510" y="45"  width="110" height="38" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="0.5"/>
+        <text x="565" y="62" text-anchor="middle" font-size="11" font-weight="500" fill="#14532D">TS / Python Server</text>
+        <text x="565" y="76" text-anchor="middle" font-size="10" fill="#16A34A">MCP SDK</text>
+        <rect x="510" y="98"  width="110" height="38" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="0.5"/>
+        <text x="565" y="115" text-anchor="middle" font-size="11" font-weight="500" fill="#14532D">Tests</text>
+        <text x="565" y="129" text-anchor="middle" font-size="10" fill="#16A34A">Jest / Pytest</text>
+        <rect x="510" y="151" width="110" height="38" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="0.5"/>
+        <text x="565" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="#14532D">Docker + K8s</text>
+        <text x="565" y="182" text-anchor="middle" font-size="10" fill="#16A34A">Deployment</text>
+        <rect x="510" y="204" width="110" height="38" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="0.5"/>
+        <text x="565" y="221" text-anchor="middle" font-size="11" font-weight="500" fill="#14532D">Docs + README</text>
+        <text x="565" y="235" text-anchor="middle" font-size="10" fill="#16A34A">Auto-generated</text>
+        <line x1="130" y1="141" x2="168" y2="121" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="130" y1="148" x2="168" y2="189" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="290" y1="112" x2="338" y2="138" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+        <line x1="290" y1="189" x2="338" y2="158" stroke="#0F766E" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+        <line x1="470" y1="135" x2="508" y2="64"  stroke="#1D4ED8" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="470" y1="140" x2="508" y2="117" stroke="#1D4ED8" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="470" y1="148" x2="508" y2="170" stroke="#1D4ED8" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="470" y1="155" x2="508" y2="223" stroke="#1D4ED8" stroke-width="1.5" marker-end="url(#ar)"/>
+        <text x="320" y="22" text-anchor="middle" font-size="13" font-weight="500" fill="#6B7280">MCP Server Generator — System Architecture</text>
+      </svg>
+    </div>
+    <div id="td" style="display:none">
+      <div style="font-size:14px;font-weight:500;margin:0 0 .75rem;color:var(--color-text-primary)">Deployment artifacts generated</div>
+      <div class="brow">
+        <span class="bpill" style="background:#EDE9FE;color:#5B21B6">Dockerfile</span>
+        <span class="bpill" style="background:#CCFBF1;color:#0F766E">docker-compose.yml</span>
+        <span class="bpill" style="background:#DBEAFE;color:#1D4ED8">k8s/deployment.yaml</span>
+        <span class="bpill" style="background:#DBEAFE;color:#1D4ED8">k8s/service.yaml</span>
+        <span class="bpill" style="background:#FEF3C7;color:#92400E">k8s/configmap.yaml</span>
+        <span class="bpill" style="background:#DCFCE7;color:#14532D">.env.example</span>
+        <span class="bpill" style="background:#DCFCE7;color:#14532D">README.md</span>
+      </div>
+      <hr class="div">
+      <div style="font-size:14px;font-weight:500;margin:0 0 .75rem;color:var(--color-text-primary)">Quick start</div>
+      <div class="code"><span class="cm"># Install &amp; build</span>
+<span class="kw">npm</span> install &amp;&amp; <span class="kw">npm</span> run build
+
+<span class="cm"># Run with Docker</span>
+<span class="kw">docker</span> compose up -d
+
+<span class="cm"># Deploy to Kubernetes</span>
+<span class="kw">kubectl</span> apply -f k8s/</div>
+      <hr class="div">
+      <div style="font-size:14px;font-weight:500;margin:0 0 .75rem;color:var(--color-text-primary)">Claude Desktop config</div>
+      <div class="code">{
+  <span class="st">"mcpServers"</span>: {
+    <span class="st">"github-api"</span>: {
+      <span class="st">"command"</span>: <span class="st">"node"</span>,
+      <span class="st">"args"</span>: [<span class="st">"dist/index.js"</span>],
+      <span class="st">"env"</span>: { <span class="st">"GITHUB_TOKEN"</span>: <span class="st">"your-token"</span> }
+    }
+  }
+}</div>
+    </div>
+    <hr class="div">
+    <button type="button" class="gbtn grey" id="resetbtn">↩ Generate Another Server</button>
+  </div>
+</div>
+<div id="toast">✓ Copied!</div>
+
+<script>
+(function(){
+  var t0;
+  var STEPS = ['Configure','Generate','Output'];
+  var PREVIEWS = {
+    'OpenAPI 3.x': 'openapi: "3.0.0"\ninfo:\n  title: GitHub REST API\n  version: "1.4.0"\npaths:\n  /repos/{owner}/{repo}:\n    get:\n      operationId: getRepository\n      ...',
+    'GraphQL SDL': 'type Query {\n  repository(owner: String!, name: String!): Repository\n  user(login: String!): User\n}\ntype Repository {\n  id: ID!\n  name: String!\n  stargazerCount: Int\n}',
+    'REST Descriptor': '{\n  "baseUrl": "https://api.github.com",\n  "endpoints": [\n    { "method": "GET", "path": "/repos/{owner}/{repo}" },\n    { "method": "POST", "path": "/repos/{owner}/{repo}/issues" }\n  ]\n}'
+  };
+  var PHASES = [
+    {pct:8,  col:'#7C3AED', msg:'Parsing API specification...'},
+    {pct:18, col:'#D97706', msg:'Analyzing endpoints and schemas...'},
+    {pct:30, col:'#7C3AED', msg:'Running Bob AI prompt workflows...'},
+    {pct:42, col:'#0F766E', msg:'Mapping endpoints → MCP Tools...'},
+    {pct:52, col:'#0F766E', msg:'Mapping endpoints → MCP Resources...'},
+    {pct:62, col:'#7C3AED', msg:'Generating server code...'},
+    {pct:70, col:'#D97706', msg:'Adding Zod validation schemas...'},
+    {pct:78, col:'#D97706', msg:'Generating authentication middleware...'},
+    {pct:84, col:'#16A34A', msg:'Writing test scaffolding...'},
+    {pct:90, col:'#0F766E', msg:'Building Docker & Kubernetes manifests...'},
+    {pct:96, col:'#16A34A', msg:'Auto-generating README & docs...'},
+    {pct:100,col:'#16A34A', msg:'✓ MCP server generated successfully!'},
+  ];
+
+  /* ---- SELECTED STATE ---- */
+  var selected = { 'g-spec':'OpenAPI 3.x', 'g-lang':'TypeScript', 'g-auth':'Bearer', 'g-deploy':'Docker' };
+
+  function applyPillStyles(groupId) {
+    var btns = document.querySelectorAll('[data-g="' + groupId + '"]');
+    btns.forEach(function(b) {
+      var isSel = b.textContent.trim() === selected[groupId];
+      b.style.background    = isSel ? '#EDE9FE' : 'transparent';
+      b.style.borderColor   = isSel ? '#7C3AED' : '#bbb';
+      b.style.color         = isSel ? '#5B21B6' : '';
+      b.style.fontWeight    = isSel ? '500'     : '400';
+    });
+  }
+
+  function initPills() {
+    Object.keys(selected).forEach(function(g) { applyPillStyles(g); });
+  }
+
+  document.querySelectorAll('button.pill').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var g = btn.getAttribute('data-g');
+      selected[g] = btn.textContent.trim();
+      applyPillStyles(g);
+      if (g === 'g-spec') {
+        document.getElementById('spec-prev').textContent = PREVIEWS[selected['g-spec']] || '';
+      }
+    });
+  });
+
+  initPills();
+
+  /* ---- STEPS ---- */
+  function renderSteps(active) {
+    var bar = document.getElementById('steps');
+    bar.innerHTML = '';
+    STEPS.forEach(function(s, i) {
+      var item = document.createElement('div'); item.className = 'step-item';
+      var col  = document.createElement('div'); col.className  = 'step-col';
+      var dot  = document.createElement('div');
+      dot.className = 'sdot ' + (i < active ? 'done' : i === active ? 'active' : 'idle');
+      dot.textContent = i < active ? '✓' : String(i+1);
+      var lbl = document.createElement('div'); lbl.className = 'slabel'; lbl.textContent = s;
+      col.appendChild(dot); col.appendChild(lbl); item.appendChild(col);
+      if (i < STEPS.length - 1) {
+        var line = document.createElement('div');
+        line.className = 'sline ' + (i < active ? 'done' : 'idle');
+        item.appendChild(line);
+      }
+      bar.appendChild(item);
+    });
+  }
+  renderSteps(0);
+
+  /* ---- TABS ---- */
+  var tabPanels = ['tc','tf','ta','td'];
+  document.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var tid = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('on'); });
+      btn.classList.add('on');
+      tabPanels.forEach(function(id) {
+        document.getElementById(id).style.display = id === tid ? 'block' : 'none';
+      });
+    });
+  });
+
+  /* ---- GENERATE ---- */
+  document.getElementById('genbtn').addEventListener('click', function() {
+    t0 = Date.now();
+    var btn = document.getElementById('genbtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    document.getElementById('logwrap').innerHTML = '';
+    document.getElementById('pbar').style.width = '0%';
+    renderSteps(1);
+    var s2 = document.getElementById('s2');
+    s2.style.display = 'block';
+    setTimeout(function(){ s2.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+    runPhase(0);
+  });
+
+  function runPhase(i) {
+    if (i >= PHASES.length) { finish(); return; }
+    var ph = PHASES[i];
+    document.getElementById('gphase').textContent = ph.msg;
+    document.getElementById('gpct').textContent   = ph.pct + '%';
+    document.getElementById('pbar').style.width   = ph.pct + '%';
+    var line = document.createElement('div'); line.className = 'logline';
+    var dot  = document.createElement('span'); dot.className = 'ldot'; dot.style.background = ph.col;
+    var txt  = document.createElement('span'); txt.style.color = 'var(--color-text-secondary,#888)'; txt.textContent = ph.msg;
+    line.appendChild(dot); line.appendChild(txt);
+    var lw = document.getElementById('logwrap'); lw.appendChild(line); lw.scrollTop = 9999;
+    var delay = i < 3 ? 320 : i < 8 ? 260 : 210;
+    setTimeout(function(){ runPhase(i+1); }, delay);
+  }
+
+  function finish() {
+    var elapsed = ((Date.now()-t0)/1000).toFixed(1);
+    var isTS = selected['g-lang'] === 'TypeScript';
+    renderSteps(2);
+    var s3 = document.getElementById('s3');
+    s3.style.display = 'block';
+    document.getElementById('sgrid').style.display = 'grid';
+    animStat('st-tools', 12);
+    animStat('st-res',   8);
+    animStat('st-ep',    24);
+    document.getElementById('st-time').textContent = elapsed + 's';
+    document.getElementById('codeout').innerHTML = isTS ? tsCode() : pyCode();
+    document.getElementById('ftree').innerHTML   = isTS ? tsTree() : pyTree();
+    /* reset tabs to first */
+    document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('on', i===0); });
+    tabPanels.forEach(function(id,i){ document.getElementById(id).style.display = i===0 ? 'block' : 'none'; });
+    setTimeout(function(){ s3.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+  }
+
+  function animStat(id, target) {
+    var cur=0, el=document.getElementById(id);
+    var iv = setInterval(function(){
+      cur = Math.min(cur + Math.ceil(target/20), target);
+      el.textContent = cur;
+      if (cur >= target) clearInterval(iv);
+    }, 40);
+  }
+
+  /* ---- COPY ---- */
+  document.getElementById('cpybtn').addEventListener('click', function(){
+    var text = document.getElementById('codeout').innerText;
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    var t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2000);
+  });
+
+  /* ---- RESET ---- */
+  document.getElementById('resetbtn').addEventListener('click', function(){
+    renderSteps(0);
+    document.getElementById('s2').style.display = 'none';
+    document.getElementById('s3').style.display = 'none';
+    document.getElementById('logwrap').innerHTML = '';
+    document.getElementById('pbar').style.width = '0%';
+    document.getElementById('gpct').textContent = '0%';
+    document.getElementById('gphase').textContent = 'Initializing...';
+    document.getElementById('sgrid').style.display = 'none';
+    var btn = document.getElementById('genbtn');
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Generate MCP Server';
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  /* ---- CODE / TREE ---- */
+  function tsCode(){ return '<span class="cm">// Generated by MCP Server Generator</span>\n<span class="kw">import</span> { Server } <span class="kw">from</span> <span class="st">\'@modelcontextprotocol/sdk/server/index.js\'</span>;\n<span class="kw">import</span> { StdioServerTransport } <span class="kw">from</span> <span class="st">\'@modelcontextprotocol/sdk/server/stdio.js\'</span>;\n<span class="kw">import</span> { z } <span class="kw">from</span> <span class="st">\'zod\'</span>;\n\n<span class="kw">const</span> server = <span class="kw">new</span> <span class="fn">Server</span>({ name: <span class="st">\'github-api-mcp\'</span>, version: <span class="st">\'1.0.0\'</span> });\n\n<span class="cm">// MCP Tool: getRepository</span>\nserver.<span class="fn">addTool</span>({\n  name: <span class="st">\'getRepository\'</span>,\n  description: <span class="st">\'Get a GitHub repository\'</span>,\n  inputSchema: z.<span class="fn">object</span>({\n    owner: z.<span class="fn">string</span>(),\n    repo:  z.<span class="fn">string</span>(),\n  }),\n  <span class="kw">async</span> <span class="fn">handler</span>({ owner, repo }) {\n    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(\n      <span class="st">`https://api.github.com/repos/${owner}/${repo}`</span>,\n      { headers: <span class="fn">getAuthHeaders</span>() }\n    );\n    <span class="kw">return</span> res.<span class="fn">json</span>();\n  },\n});\n\n<span class="cm">// MCP Resource: github://repo/{owner}/{repo}</span>\nserver.<span class="fn">addResource</span>({\n  uriPattern: <span class="st">\'github://repo/{owner}/{repo}\'</span>,\n  mimeType: <span class="st">\'application/json\'</span>,\n  <span class="kw">async</span> <span class="fn">handler</span>({ owner, repo }) {\n    <span class="kw">return</span> <span class="fn">getRepository</span>(owner, repo);\n  },\n});\n\n<span class="kw">const</span> transport = <span class="kw">new</span> <span class="fn">StdioServerTransport</span>();\n<span class="kw">await</span> server.<span class="fn">connect</span>(transport);'; }
+
+  function pyCode(){ return '<span class="cm"># Generated by MCP Server Generator</span>\n<span class="kw">from</span> mcp <span class="kw">import</span> FastMCP\n<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field\n<span class="kw">import</span> httpx\n\nmcp = <span class="fn">FastMCP</span>(<span class="st">"github-api-mcp"</span>)\n\n<span class="kw">class</span> <span class="nm">RepoInput</span>(BaseModel):\n    owner: str = <span class="fn">Field</span>(description=<span class="st">"Repository owner"</span>)\n    repo:  str = <span class="fn">Field</span>(description=<span class="st">"Repository name"</span>)\n\n@mcp.<span class="fn">tool</span>()\n<span class="kw">async def</span> <span class="fn">get_repository</span>(params: <span class="nm">RepoInput</span>) -> dict:\n    <span class="st">"""Get a GitHub repository."""</span>\n    <span class="kw">async with</span> httpx.<span class="fn">AsyncClient</span>() <span class="kw">as</span> client:\n        r = <span class="kw">await</span> client.<span class="fn">get</span>(\n            f<span class="st">"https://api.github.com/repos/{params.owner}/{params.repo}"</span>,\n            headers=<span class="fn">get_auth_headers</span>()\n        )\n        r.<span class="fn">raise_for_status</span>()\n        <span class="kw">return</span> r.<span class="fn">json</span>()\n\n@mcp.<span class="fn">resource</span>(<span class="st">"github://repo/{owner}/{repo}"</span>)\n<span class="kw">async def</span> <span class="fn">repo_resource</span>(owner: str, repo: str) -> dict:\n    <span class="kw">return await</span> <span class="fn">get_repository</span>(<span class="nm">RepoInput</span>(owner=owner, repo=repo))\n\n<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:\n    mcp.<span class="fn">run</span>()'; }
+
+  function tsTree(){ return '<span class="fc">📁 generated-github-api/</span>\n  <span class="fc">📁 src/</span>\n    <span class="fts">📄 index.ts</span>\n    <span class="fts">📄 server.ts</span>\n    <span class="fts">📄 tools.ts</span>\n    <span class="fts">📄 resources.ts</span>\n    <span class="fts">📄 auth.ts</span>\n    <span class="fts">📄 schemas.ts</span>\n  <span class="fc">📁 tests/</span>\n    <span class="fts">📄 tools.test.ts</span>\n    <span class="fts">📄 resources.test.ts</span>\n  <span class="fc">📁 k8s/</span>\n    <span class="fo">📄 deployment.yaml</span>\n    <span class="fo">📄 service.yaml</span>\n    <span class="fo">📄 configmap.yaml</span>\n  <span class="fo">📄 Dockerfile</span>\n  <span class="fo">📄 docker-compose.yml</span>\n  <span class="fo">📄 package.json</span>\n  <span class="fo">📄 tsconfig.json</span>\n  <span class="fo">📄 .env.example</span>\n  <span class="fo">📄 README.md</span>'; }
+
+  function pyTree(){ return '<span class="fc">📁 generated-github-api/</span>\n  <span class="fpy">📄 server.py</span>\n  <span class="fpy">📄 tools.py</span>\n  <span class="fpy">📄 resources.py</span>\n  <span class="fpy">📄 auth.py</span>\n  <span class="fpy">📄 schemas.py</span>\n  <span class="fc">📁 tests/</span>\n    <span class="fpy">📄 test_tools.py</span>\n    <span class="fpy">📄 test_resources.py</span>\n  <span class="fc">📁 k8s/</span>\n    <span class="fo">📄 deployment.yaml</span>\n    <span class="fo">📄 service.yaml</span>\n  <span class="fo">📄 Dockerfile</span>\n  <span class="fo">📄 docker-compose.yml</span>\n  <span class="fo">📄 requirements.txt</span>\n  <span class="fo">📄 .env.example</span>\n  <span class="fo">📄 README.md</span>'; }
+
+})();
+</script>
