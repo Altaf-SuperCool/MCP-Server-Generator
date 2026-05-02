@@ -4,7 +4,10 @@
 
 ## Status
 
-Production ready — Day 3 complete.
+Production ready 
+
+## 🎮 Live Simulation
+  - ** https://altaf-supercool.github.io/mcp-sim/
 
 ## Overview
 
