@@ -8,7 +8,7 @@ Production ready
 
 ## 🎮 Live Simulation
 
-  - **[PROJECT-SUMMARY.md](https://altaf-supercool.github.io/mcp-sim/)** 
+  - **[Live Simulation](https://altaf-supercool.github.io/mcp-sim/)** 
 
 ## Overview
 
