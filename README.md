@@ -26,6 +26,8 @@ Production ready — Day 3 complete.
 - Validation using **Zod** (TypeScript) or **Pydantic** (Python)
 - Auto-generated tests for Jest and Pytest
 - Docker and Kubernetes deployment templates
+- Verified Docker runtime for the generated example server
+- Kubernetes manifests generated; cluster deployment is manual
 - Bob AI prompt integration for assisted generation
 - CLI-driven workflow with interactive prompts and summaries
 

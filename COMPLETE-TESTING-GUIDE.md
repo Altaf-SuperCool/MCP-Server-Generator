@@ -596,6 +596,8 @@ docker ps
 # Should show "healthy" status
 ```
 
+> Note: Current validation confirmed the generated Docker image built and the container started successfully for `mcp-server-test`.
+
 ### Kubernetes Testing
 
 #### Update Secrets
@@ -845,7 +847,7 @@ npm run test:bob
 ### Integration
 - ✅ Claude Desktop integration works
 - ✅ Docker builds and runs
-- ✅ Kubernetes deploys successfully
+- ⚠️ Kubernetes manifests generated; runtime deployment not executed in this run
 - ✅ Health checks pass
 - ✅ Logs are accessible
 
