@@ -392,36 +392,36 @@ mcp-server-generator/
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Weeks 1-2)
+### Phase 1: Foundation 
 - Set up project structure
 - Implement CLI framework
 - Create basic OpenAPI parser
 - Build TypeScript generator skeleton
 
-### Phase 2: Core Features (Weeks 3-4)
+### Phase 2: Core Features
 - Complete all parsers (OpenAPI, GraphQL, REST)
 - Implement tool/resource mapping
 - Build TypeScript code generator
 - Add authentication layer
 
-### Phase 3: Python Support (Week 5)
+### Phase 3: Python Support
 - Create Python code generator
 - Port templates to Python
 - Test Python output
 
-### Phase 4: Advanced Features (Week 6)
+### Phase 4: Advanced Features
 - Add transport configurations
 - Implement test generator
 - Build documentation generator
 - Create deployment configs
 
-### Phase 5: Polish & Testing (Week 7)
+### Phase 5: Polish & Testing 
 - End-to-end testing
 - Documentation
 - Example projects
 - Bug fixes
 
-### Phase 6: Release (Week 8)
+### Phase 6: Release 
 - CI/CD setup
 - Package publishing
 - Release documentation
