@@ -114,6 +114,12 @@ node dist/cli/index.js prompts -i examples/github-api.yaml -m auto
 4. Choose output directory and language
 5. Review generated project files
 
+**Quick Demo**: Sample generated servers are available in:
+- `./generated-example-python/` (Python, GitHub API)
+- `./generated-example-ts/` (TypeScript, GitHub API)
+
+Run `cd generated-example-python && pip install -r requirements.txt && pytest` or `cd generated-example-ts && npm install && npm test` to see them in action.
+
 ## Architecture at a Glance
 
 ```text
