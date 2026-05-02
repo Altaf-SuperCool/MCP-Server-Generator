@@ -4,7 +4,7 @@
 
 ## Status
 
-Production ready — Day 3 complete.
+Production ready .
 
 ## Overview
 
