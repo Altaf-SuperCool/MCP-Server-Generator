@@ -29,6 +29,28 @@ Production ready — Day 3 complete.
 - Bob AI prompt integration for assisted generation
 - CLI-driven workflow with interactive prompts and summaries
 
+## Why This Project Is Unique
+
+- **MCP-first generation**: Converts API specifications into MCP Resources and Tools rather than generic server scaffolding.
+- **AI-assisted mapping**: Uses IBM Bob-style prompt workflows to analyze API semantics and choose the right MCP primitives.
+- **Full-stack output**: Generates server code, validation, tests, documentation, Docker, and Kubernetes artifacts in one pass.
+- **Flexible AI workflow**: Supports both manual prompt display and automated AI generation via OpenAI-compatible APIs.
+
+## Design and Usability
+
+- **Fast onboarding**: A single CLI command can generate a complete server project from a specification.
+- **Guided developer experience**: Interactive prompts and help text make the tool easy to use for both junior and senior engineers.
+- **Production-ready structure**: Generated output includes standard files like `README.md`, `.env.example`, `package.json`, and test suites.
+- **Deployment-ready**: Built-in Docker and Kubernetes templates reduce time-to-production for cloud-native teams.
+- **Clear adoption path**: Clone, install, generate, install dependencies, and run.
+
+## Effectiveness and Efficiency
+
+- **Solves a high-priority problem**: Rapidly converting API specs into working MCP services reduces manual implementation and integration risk.
+- **Measurable impact**: Designed to generate code in under 30 seconds and support fast prototyping of API-driven services.
+- **Scalable use cases**: Useful for internal platform teams, AI service builders, integration engineers, and MCP adopters.
+- **Extensible architecture**: The generator can be extended to support more API formats, deployment targets, and enterprise workflows.
+
 ## Supported Inputs
 
 - OpenAPI 3.x / Swagger 2.0 (JSON or YAML)
